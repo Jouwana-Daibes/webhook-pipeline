@@ -1,0 +1,22 @@
+# Node modules
+node_modules/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# Environment variables
+.env
+
+# Build output
+dist/
+build/
+
+# Docker
+*.pid
+
+# Misc
+ERROR
+CACHED
