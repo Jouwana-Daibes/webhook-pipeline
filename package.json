@@ -7,7 +7,7 @@
     "dev": "nodemon src/api/server.ts",
     "build": "tsc",
     "start": "node dist/api/server.js",
-    "worker": "ts-node src/workers/worker.ts"
+    "worker": "ts-node src/worker/index.ts"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +17,7 @@
     "axios": "^1.13.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "ioredis": "^5.10.1",
     "pg": "^8.20.0"
   },
   "devDependencies": {

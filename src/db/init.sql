@@ -35,3 +35,13 @@ CREATE TABLE IF NOT EXISTS job_attempts (
     response TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS delivery_attempts (
+    id SERIAL PRIMARY KEY,
+    job_id INT REFERENCES jobs(id),
+    attempt_time TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(20),
+    response_code JSONB,
+    response_body TEXT,
+    success BOOLEAN
+);

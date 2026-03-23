@@ -5,7 +5,9 @@ import dotenv from 'dotenv';  // load environment variables
 dotenv.config();           
 import pipelinesRouter from './pipelines';
 import subscribersRouter from './subscribers';
-
+import jobsRouter from './jobs';
+import deliveryAttemptsRouter from './delivery_attempts'
+;
 const app = express();       // create an express application
 app.use(express.json());    //  middleware to parse JSON request bodies.
 

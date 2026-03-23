@@ -1,5 +1,11 @@
 import express from 'express';
 import { pool } from '../db';
+import Redis from 'ioredis';
+
+const redis = new Redis({
+  host: 'redis',
+  port: 6379
+});
 
 const router = express.Router();
 
@@ -20,11 +26,11 @@ router.get('/:id', async (req, res) => {
 // Update job (status, etc.)
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { status, data } = req.body;
+  const { status, payload } = req.body;
   try {
     const result = await pool.query(
-      `UPDATE jobs SET status=$1, data=$2 WHERE id=$3 RETURNING *`,
-      [status, data, id]
+      `UPDATE jobs SET status=$1, payload=$2 WHERE id=$3 RETURNING *`,
+      [status, payload, id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
@@ -35,12 +41,22 @@ router.put('/:id', async (req, res) => {
 
 //  create job manually (usually worker does this)
 router.post('/', async (req, res) => {
-  const { pipeline_id, data } = req.body;
+  const { pipeline_id, payload } = req.body;
   try {
     const result = await pool.query(
-      `INSERT INTO jobs (pipeline_id, data, status) VALUES ($1, $2, 'pending') RETURNING *`,
-      [pipeline_id, data]
+      `INSERT INTO jobs (pipeline_id, payload, status) VALUES ($1, $2, 'pending') RETURNING *`,
+      [pipeline_id, payload]
     );
+
+    const job = result.rows[0];
+
+    // push to Redis queue
+    await redis.lpush('jobs', JSON.stringify({
+      job_id: job.id,
+      pipeline_id,
+      payload
+    }));
+
     res.status(201).json(result.rows[0]);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
