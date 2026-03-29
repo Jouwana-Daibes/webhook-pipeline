@@ -1,6 +1,7 @@
 import Redis from 'ioredis';
 import axios from 'axios';
 import { pool } from '../db';
+import { summarizeText } from "../services/ai.service";
 
 const redis = new Redis({
   host: 'redis', // docker service name
@@ -86,13 +87,14 @@ async function deliverWithRetry(
   }
 }
 
+
+const seenMessages = new Set<string>();
 async function processJobAction(pipeline_id: number, payload: any): Promise<any> {
   const pipelineRes = await pool.query(
     `SELECT * FROM pipelines WHERE id=$1`,
     [pipeline_id]
   );
   const pipeline = pipelineRes.rows[0];
-
   let newPayload = { ...payload };
 
   console.log(`----------------------------------`);
@@ -103,10 +105,72 @@ async function processJobAction(pipeline_id: number, payload: any): Promise<any>
     case 'uppercase_field':
       if (newPayload.message) {
         newPayload.message = newPayload.message.toUpperCase();
-        console.log(`[ACTION uppercase_field] 🔠 Converted message to uppercase`);
+        console.log(`[ACTION uppercase_field] 🔠 Converted message to uppercase`        );
       }
       break;
 
+      case 'sentiment_analysis':
+  if (newPayload.message) {
+    const msg = newPayload.message.toLowerCase();
+
+    const positiveWords = ['perfect', 'good', 'great', 'amazing', 'love', 'excellent'];
+    const negativeWords = ['bad', 'error', 'fail', 'terrible', 'hate'];
+
+    let score = 0;
+
+    positiveWords.forEach(word => {
+      if (msg.includes(word)) score++;
+    });
+
+    negativeWords.forEach(word => {
+      if (msg.includes(word)) score--;
+    });
+
+    if (score > 0) newPayload.sentiment = 'positive';
+    else if (score < 0) newPayload.sentiment = 'negative';
+    else newPayload.sentiment = 'neutral';
+  }
+  break;
+  case 'duplicate_detector':
+  if (newPayload.message) {
+    if (seenMessages.has(newPayload.message)) {
+      newPayload.is_duplicate = true;
+    } else {
+      newPayload.is_duplicate = false;
+      seenMessages.add(newPayload.message);
+    }
+  }
+  break;
+/*      case 'auto_title_generator':
+      if (newPayload.message) {
+    	const words = newPayload.message
+      	.replace(/[^\w\s]/g, '')
+      	.split(' ')
+        words.filter((w: string) => w.length > 3)
+    	const title = words.slice(0, 5).join(' ');
+
+    	newPayload.title = title;
+  	}
+  	break;
+
+      case 'text_summarization':
+  	if (newPayload.message) {
+    	   console.log('[ACTION] Summarizing with config...');
+           const config = pipeline.action_config || {};
+           const maxTokens = config.max_tokens || 60;
+           const style = config.style || "normal";
+
+           const summary = await summarizeText(
+             newPayload.message,
+             maxTokens,
+             style
+           );
+
+           newPayload.summary = summary;
+           }
+           break;
+
+      
     case 'add_timestamp':
       newPayload.processed_at = new Date().toISOString();
       console.log(`[ACTION add_timestamp] ⏱ Added timestamp`);
@@ -115,7 +179,7 @@ async function processJobAction(pipeline_id: number, payload: any): Promise<any>
     case 'route_high_value':
       console.log(`[ACTION route_high_value] 💰 Will filter subscribers based on amount`);
       break;
-
+*/
     default:
       console.log(`[ACTION default] ⚠️ No processing applied`);
       break;
