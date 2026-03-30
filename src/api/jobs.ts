@@ -190,4 +190,107 @@ router.delete('/pipeline/:pipeline_id', async (req, res) => {
   }
 });
 */
+
+
+// Get job with delivery attempts (FULL HISTORY)
+router.get('/:id/full', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Get job
+    const jobResult = await pool.query(
+      `SELECT * FROM jobs WHERE id=$1`,
+      [id]
+    );
+
+    if (jobResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    const job = jobResult.rows[0];
+
+    // 2. Get delivery attempts
+    const attemptsResult = await pool.query(
+      `SELECT * FROM delivery_attempts WHERE job_id=$1 ORDER BY attempt_time ASC`,
+      [id]
+    );
+
+    // 3. Return combined response
+    res.json({
+      job,
+      delivery_attempts: attemptsResult.rows
+    });
+
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// Get all jobs for a pipeline (history)
+router.get('/pipeline/:pipeline_id', async (req, res) => {
+  const { pipeline_id } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT * FROM jobs WHERE pipeline_id=$1 ORDER BY created_at DESC`,
+      [pipeline_id]
+    );
+
+    res.json(result.rows);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get ONLY job status
+router.get('/:id/status', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT id, status, result FROM jobs WHERE id=$1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    res.json(result.rows[0]);
+
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/*
+// Get ONLY job history (delivery attempts)
+router.get('/:id/history', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT
+          subscriber_id,
+          attempt_number,
+          status,
+          response_code,
+          success,
+          attempt_time
+       FROM delivery_attempts
+       WHERE job_id=$1
+       ORDER BY attempt_time ASC`,
+      [id]
+    );
+
+    res.json({
+      job_id: id,
+      attempts: result.rows
+    });
+
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});*/
 export default router;

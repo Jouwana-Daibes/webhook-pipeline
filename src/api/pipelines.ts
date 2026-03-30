@@ -56,5 +56,21 @@ router.delete('/:id', async (req, res) => {
   await pool.query('DELETE FROM pipelines WHERE id=$1', [id]);
   res.json({ message: 'Pipeline deleted' });
 });
+/*
+// Get all jobs for a pipeline (history)
+router.get('/pipeline/:pipeline_id', async (req, res) => {
+  const { pipeline_id } = req.params;
 
+  try {
+    const result = await pool.query(
+      `SELECT * FROM jobs WHERE pipeline_id=$1 ORDER BY created_at DESC`,
+      [pipeline_id]
+    );
+
+    res.json(result.rows);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+*/
 export default router;

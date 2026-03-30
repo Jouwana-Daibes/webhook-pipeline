@@ -10,7 +10,8 @@ router.get('/', async (_req, res) => {
 });
 
 // Get delivery attempts by job
-router.get('/:job_id', async (req, res) => {
+//router.get('/:job_id', async (req, res) => {
+router.get('/job/:job_id', async (req, res) => { 
   const { job_id } = req.params;
   const result = await pool.query(
     'SELECT * FROM delivery_attempts WHERE job_id=$1',
@@ -33,5 +34,35 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Get ONLY job history (delivery attempts)
+router.get('/:id/history', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT
+          subscriber_id,
+          attempt_number,
+          status,
+          response_code,
+          success,
+          attempt_time
+       FROM delivery_attempts
+       WHERE job_id=$1
+       ORDER BY attempt_time ASC`,
+      [id]
+    );
+
+    res.json({
+      job_id: id,
+      attempts: result.rows
+    });
+
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 export default router;
