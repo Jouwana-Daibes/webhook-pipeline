@@ -232,6 +232,7 @@ Example:
 Pipeline Name: Sentiment Analysis
 Action Type: sentiment_analysis
 }
+```
 - Payload Before Action:
 ```json
 {
@@ -269,7 +270,7 @@ curl -X POST http://localhost:3000/pipelines \
     1. Create the pipeline.
     2. Add subscribers to the pipeline.
     3. Send a webhook to trigger the pipeline action.
-##### 1. Create a pipeline
+##### i. Create a pipeline
 ```
 curl -X POST http://localhost:3000/pipelines \
   -H "Content-Type: application/json" \
@@ -279,7 +280,7 @@ curl -X POST http://localhost:3000/pipelines \
         "action_type": "sentiment_analysis"
       }'
 ```
-##### Add a subscriber
+##### ii. Add a subscriber
 ```
 curl -X POST http://localhost:3000/subscribers \
   -H "Content-Type: application/json" \
@@ -288,7 +289,7 @@ curl -X POST http://localhost:3000/subscribers \
         "target_url": "http://webhook.site/target-url"
       }'
 ```
-##### Send a test webhook
+##### iii. Send a test webhook
 ```
 curl -X POST http://localhost:3000/webhooks/3 \
   -H "Content-Type: application/json" \
