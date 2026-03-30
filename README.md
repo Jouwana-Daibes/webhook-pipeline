@@ -201,16 +201,15 @@ This action type checks if a message has been seen before. If the message is dup
 **Example:**
 
 - Pipeline Name: Duplicate Detector
-- Action Type: duplicate_detector
+- Action Type: `duplicate_detector`
 
-
-  - Payload Before Action:
+Payload Before Action:
 ```json
 {
   "message": "same"
 }
 ```
-  - Payload After Action:
+Payload After Action:
 ```json
 {
   "message": "same",
@@ -227,15 +226,15 @@ This action type analyzes the sentiment of the message field. It will assign a s
 
 **Example:**
 - Pipeline Name: Sentiment Analysis
-- Action Type: sentiment_analysis
+- Action Type: `sentiment_analysis`
 
-  - Payload Before Action:
+Payload Before Action:
 ```json
 {
   "message": "this is amazing and perfect"
 }
 ```
-  - Payload After Action:
+Payload After Action:
 ```json
 {
   "message": "this is amazing and perfect",
