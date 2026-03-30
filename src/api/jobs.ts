@@ -15,6 +15,27 @@ router.get('/', async (_req, res) => {
   res.json(result.rows);
 });
 
+router.get('/completed', async (req, res) => {
+  const result = await pool.query(
+    `SELECT * FROM jobs WHERE status = 'completed' ORDER BY created_at DESC`
+  );
+  res.json(result.rows);
+});
+
+router.get('/failed', async (req, res) => {
+  const result = await pool.query(
+    `SELECT * FROM jobs WHERE status = 'failed' ORDER BY created_at DESC`
+  );
+  res.json(result.rows);
+});
+
+router.get('/processing', async (req, res) => {
+  const result = await pool.query(
+    `SELECT * FROM jobs WHERE status = 'processing' ORDER BY created_at DESC`
+  );
+  res.json(result.rows);
+});
+
 // Get job by ID
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
@@ -293,4 +314,5 @@ router.get('/:id/history', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });*/
+
 export default router;
