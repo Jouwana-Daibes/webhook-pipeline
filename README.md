@@ -178,6 +178,7 @@ This action type converts a specific field (in this case, the `message` field) t
 #### Example:
 - **Pipeline Name**: Uppercase
 - **Action Type**: `uppercase_field`
+
 Payload Before Action:
   ```json
   {
@@ -217,6 +218,7 @@ Payload After Action:
 }
 ```
 **Description:**
+
 This action checks if the message field in the payload has already been processed. If the same message is encountered again, it is flagged as a duplicate.
 The flag is_duplicate will be true for duplicate messages, and false for unique ones.
 
