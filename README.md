@@ -164,6 +164,140 @@ pending → processing → completed / failed / cancelled
 ```
 
 ---
+## Webhook Pipeline Service
+
+This service processes jobs through different pipelines and performs actions on the payload based on the specified action type. Below are the available action types that can be assigned to a pipeline.
+
+### Action Types
+
+#### 1. **`uppercase_field`**
+This action type converts a specific field (in this case, the `message` field) to uppercase.
+
+#### Example:
+- **Pipeline Name**: Uppercase
+- **Action Type**: `uppercase_field`
+- **Payload Before Action**:
+  ```json
+  {
+    "message": "hello"
+  }
+  ```
+Payload After Action:
+```json
+{
+  "message": "HELLO"
+}
+```
+**Description:**
+This action scans the message field of the payload and converts the value to uppercase.
+If the message field is not present, it will be ignored.
+
+#### 2. duplicate_detector
+
+This action type checks if a message has been seen before. If the message is duplicated, the is_duplicate flag is set to true; otherwise, it is set to false.
+
+Example:
+```json
+{
+Pipeline Name: Duplicate Detector
+Action Type: duplicate_detector
+}
+```
+
+- Payload Before Action:
+```json
+{
+  "message": "same"
+}
+```
+
+- Payload After Action:
+```json
+{
+  "message": "same",
+  "is_duplicate": true
+}
+```
+**Description:**
+This action checks if the message field in the payload has already been processed. If the same message is encountered again, it is flagged as a duplicate.
+The flag is_duplicate will be true for duplicate messages, and false for unique ones.
+
+#### 3. sentiment_analysis
+
+This action type analyzes the sentiment of the message field. It will assign a sentiment label based on the text content.
+
+Example:
+```json
+{
+Pipeline Name: Sentiment Analysis
+Action Type: sentiment_analysis
+}
+- Payload Before Action:
+```json
+{
+  "message": "this is amazing and perfect"
+}
+```
+- Payload After Action:
+```json
+{
+  "message": "this is amazing and perfect",
+  "sentiment": "positive"
+}
+```
+**Description:**
+This action type evaluates the message field and assigns one of three sentiment labels:
+  - positive
+  - neutral
+  - negative
+The sentiment is determined based on the presence of predefined positive and negative words in the message field.
+How to Use Action Types in a Pipeline
+
+**To create a pipeline with a specific action type, you can make a POST request to the /pipelines endpoint with the appropriate action type.**
+
+- Example of Creating a Pipeline with Action Types:
+```
+curl -X POST http://localhost:3000/pipelines \
+  -H "Content-Type: application/json" \
+  -d '{
+        "name": "Uppercase Pipeline",
+        "source_url": "http://example.com",
+        "action_type": "uppercase_field"
+      }'
+```
+- Pipeline Example with Subscribers
+    1. Create the pipeline.
+    2. Add subscribers to the pipeline.
+    3. Send a webhook to trigger the pipeline action.
+##### 1. Create a pipeline
+```
+curl -X POST http://localhost:3000/pipelines \
+  -H "Content-Type: application/json" \
+  -d '{
+        "name": "Sentiment Analysis Pipeline",
+        "source_url": "http://example.com",
+        "action_type": "sentiment_analysis"
+      }'
+```
+##### Add a subscriber
+```
+curl -X POST http://localhost:3000/subscribers \
+  -H "Content-Type: application/json" \
+  -d '{
+        "pipeline_id": 3,
+        "target_url": "http://webhook.site/target-url"
+      }'
+```
+##### Send a test webhook
+```
+curl -X POST http://localhost:3000/webhooks/3 \
+  -H "Content-Type: application/json" \
+  -d '{"message": "I love this service!"}'
+```
+**Conclusion**
+
+These action types allow for simple but effective processing of incoming webhook data. You can create complex workflows by chaining multiple pipelines and applying different actions to the payloads. Customize the behavior by adjusting the action_type and related configurations for each pipeline.
+
 
 ##  Debugging
 
