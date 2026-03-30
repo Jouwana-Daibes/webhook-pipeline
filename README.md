@@ -134,13 +134,15 @@ curl http://localhost:3000/jobs/1
 
 * Converts `payload.text` to uppercase
 
-### 2. `add_timestamp`
+### 2. `duplicate_detector`
 
-* Adds `processed_at` timestamp to payload
+* Check if the same text has processed
 
-### 3. `route_high_value`
+### 3. `sentiment_analysis`
 
-* Sends only jobs with `amount > 100`
+* classify the sentence to positive, negative or neutral.
+
+
 
 ---
 
@@ -176,7 +178,7 @@ This action type converts a specific field (in this case, the `message` field) t
 #### Example:
 - **Pipeline Name**: Uppercase
 - **Action Type**: `uppercase_field`
-- **Payload Before Action**:
+Payload Before Action:
   ```json
   {
     "message": "hello"
@@ -196,22 +198,19 @@ If the message field is not present, it will be ignored.
 
 This action type checks if a message has been seen before. If the message is duplicated, the is_duplicate flag is set to true; otherwise, it is set to false.
 
-Example:
-```json
-{
-Pipeline Name: Duplicate Detector
-Action Type: duplicate_detector
-}
-```
+**Example:**
 
-- Payload Before Action:
+- Pipeline Name: Duplicate Detector
+- Action Type: duplicate_detector
+
+
+  - Payload Before Action:
 ```json
 {
   "message": "same"
 }
 ```
-
-- Payload After Action:
+  - Payload After Action:
 ```json
 {
   "message": "same",
@@ -226,20 +225,17 @@ The flag is_duplicate will be true for duplicate messages, and false for unique 
 
 This action type analyzes the sentiment of the message field. It will assign a sentiment label based on the text content.
 
-Example:
-```json
-{
-Pipeline Name: Sentiment Analysis
-Action Type: sentiment_analysis
-}
-```
-- Payload Before Action:
+**Example:**
+- Pipeline Name: Sentiment Analysis
+- Action Type: sentiment_analysis
+
+  - Payload Before Action:
 ```json
 {
   "message": "this is amazing and perfect"
 }
 ```
-- Payload After Action:
+  - Payload After Action:
 ```json
 {
   "message": "this is amazing and perfect",
