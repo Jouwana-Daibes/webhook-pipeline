@@ -42,6 +42,12 @@ app.post('/delivery/:id', (req, res) => {
 app.use('/webhooks', webhooksRouter);
 const PORT = process.env.PORT || 3000; // use environment variable for port or default to 3000
 
+
+app.post('/test-receiver', (req, res) => {
+  console.log("✅ Received webhook:", req.body);
+  res.status(200).json({ ok: true });
+});
+
 // start the server and log that it’s running.
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 

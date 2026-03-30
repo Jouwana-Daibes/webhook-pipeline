@@ -1,29 +1,205 @@
-name: CI Pipeline
+name: Webhook Pipeline Test
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: [main]
 
 jobs:
-  build:
+  test-webhooks:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: webhookdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d webhookdb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install deps
+        run: npm ci
 
-      - name: Build project
-        run: npm run build
+      - name: Start API
+        run: |
+          npm run build
+          nohup npm run start:api &
+          sleep 5
 
-      - name: Run tests (optional)
-        run: echo "No tests yet"
+      - name: Start Worker
+        run: |
+          nohup npm run start:worker &
+          sleep 5
+
+      - name: 🧪 Full system test
+        run: |
+          echo "🚀 Creating pipelines..."
+
+          curl -s -X POST http://localhost:3000/pipelines \
+            -H "Content-Type: application/json" \
+            -d '{"name":"Uppercase","source_url":"s1","action_type":"uppercase_field"}'
+
+          curl -s -X POST http://localhost:3000/pipelines \
+            -H "Content-Type: application/json" \
+            -d '{"name":"Duplicate","source_url":"s2","action_type":"duplicate_detector"}'
+
+          curl -s -X POST http://localhost:3000/pipelines \
+            -H "Content-Type: application/json" \
+            -d '{"name":"Sentiment","source_url":"s3","action_type":"sentiment_analysis"}'
+
+          echo "👥 Adding subscribers..."
+
+          curl -s -X POST http://localhost:3000/subscribers \
+            -H "Content-Type: application/json" \
+            -d '{"pipeline_id":1,"target_url":"https://webhook.site/test1"}'
+
+          curl -s -X POST http://localhost:3000/subscribers \
+            -H "Content-Type: application/json" \
+            -d '{"pipeline_id":2,"target_url":"https://webhook.site/test2"}'
+
+          curl -s -X POST http://localhost:3000/subscribers \
+            -H "Content-Type: application/json" \
+            -d '{"pipeline_id":3,"target_url":"https://webhook.site/test3"}'
+
+          echo "📩 Sending webhooks..."
+
+          # Uppercase
+          curl -s -X POST http://localhost:3000/webhooks/1 \
+            -H "Content-Type: application/json" \
+            -d '{"message":"hello"}'
+
+          # Duplicate (send twice)
+          curl -s -X POST http://localhost:3000/webhooks/2 \
+            -H "Content-Type: application/json" \
+            -d '{"message":"same"}'
+
+          curl -s -X POST http://localhost:3000/webhooks/2 \
+            -H "Content-Type: application/json" \
+            -d '{"message":"same"}'
+
+          # Sentiment
+          curl -s -X POST http://localhost:3000/webhooks/3 \
+            -H "Content-Type: application/json" \
+             -d '{"message":"this is amazing and perfect"}'
+          
+          
+          echo "⏳ Waiting..."
+          sleep 10
+
+          echo "📊 Fetching results..."
+
+          # Get jobs
+          JOB1=$(curl -s http://localhost:3000/jobs/pipeline/1 | jq '.[0]')
+          JOB2=$(curl -s http://localhost:3000/jobs/pipeline/2 | jq '.[0]')
+          JOB3=$(curl -s http://localhost:3000/jobs/pipeline/3 | jq '.[0]')
+
+          echo "Uppercase job:"
+          echo $JOB1 | jq
+
+          echo "Duplicate job:"
+          echo $JOB2 | jq
+
+          echo "Sentiment job:"
+          echo $JOB3 | jq
+
+          echo "🧪 Validating results..."
+
+          # Extract values
+          MSG_UPPER=$(echo $JOB1 | jq -r '.result.message')
+          DUP_FLAG=$(echo $JOB2 | jq -r '.result.is_duplicate')
+          SENTIMENT=$(echo $JOB3 | jq -r '.result.sentiment')
+
+          echo "Uppercase result: $MSG_UPPER"
+          echo "Duplicate flag: $DUP_FLAG"
+          echo "Sentiment: $SENTIMENT"
+
+          # Assertions
+          if [ "$MSG_UPPER" != "HELLO" ]; then
+            echo "❌ Uppercase test failed"
+            exit 1
+          fi
+
+          if [ "$DUP_FLAG" != "true" ]; then
+            echo "❌ Duplicate detector failed"
+            exit 1
+          fi
+
+          if [ "$SENTIMENT" != "positive" ]; then
+            echo "❌ Sentiment analysis failed"
+            exit 1
+          fi
+
+          echo "✅ All tests passed!"
+
+        
+          # - name: Show delivery attempts
+          #run: |
+          # echo "📦 Delivery attempts:"
+          #curl -s http://localhost:3000/delivery-attempts | jq
+          - name: 🧪 Validate delivery per subscriber
+           run: |
+            echo "📩 Sending webhook..."
+
+            curl -s -X POST http://localhost:3000/webhooks/1 \
+              -H "Content-Type: application/json" \
+              -d '{"message":"hello from CI"}'
+
+          echo "⏳ Waiting for processing..."
+          sleep 10
+
+          echo "📊 Getting latest job..."
+
+          JOB_ID=$(curl -s http://localhost:3000/jobs/pipeline/1 | jq 'sort_by(.id) | last | .id')
+
+          echo "Job ID: $JOB_ID"
+
+          echo "👥 Fetching subscribers..."
+          SUBSCRIBERS=$(curl -s http://localhost:3000/subscribers/pipeline/1)
+          echo $SUBSCRIBERS | jq
+
+          echo "📦 Fetching delivery attempts..."
+          ATTEMPTS=$(curl -s http://localhost:3000/delivery-attempts/job/$JOB_ID)
+          echo $ATTEMPTS | jq
+
+          echo "🔍 Validating each subscriber..."
+
+          FAILED=0
+
+          for SUB_ID in $(echo $SUBSCRIBERS | jq -r '.[].id'); do
+          echo "Checking subscriber $SUB_ID..."
+
+          SUCCESS=$(echo $ATTEMPTS | jq "[.[] | select(.subscriber_id == $SUB_ID and .success == true)] | length")
+
+          if [ "$SUCCESS" -eq 0 ]; then
+            echo "❌ Subscriber $SUB_ID did NOT receive the webhook"
+            FAILED=1
+          else
+            echo "✅ Subscriber $SUB_ID received the webhook"
+          fi
+           done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo "❌ Some subscribers did not receive the webhook"
+            exit 1
+          fi
+
+           echo "🎉 All subscribers received the webhook successfully!"
