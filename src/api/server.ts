@@ -48,6 +48,10 @@ app.post('/test-receiver', (req, res) => {
   res.status(200).json({ ok: true });
 });
 
+app.get('/health', (req, res) => {
+  res.send('OK');
+});
+
 // start the server and log that it’s running.
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 

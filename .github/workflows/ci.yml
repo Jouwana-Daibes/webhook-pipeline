@@ -39,6 +39,19 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: 🐳 Start services
+        run: docker compose up -d --build
+
+      - name: ⏳ Wait for API
+        run: |
+          for i in {1..20}; do
+            if curl -s http://localhost:3000/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
       - name: Start API
         run: |
           npm run build
@@ -70,15 +83,15 @@ jobs:
 
           curl -s -X POST http://localhost:3000/subscribers \
             -H "Content-Type: application/json" \
-            -d '{"pipeline_id":1,"target_url":"https://webhook.site/test1"}'
+            -d '{"pipeline_id":1,"target_url":"http://localhost:3000/test-receiver"}'
 
           curl -s -X POST http://localhost:3000/subscribers \
             -H "Content-Type: application/json" \
-            -d '{"pipeline_id":2,"target_url":"https://webhook.site/test2"}'
+            -d '{"pipeline_id":2,"target_url":"http://localhost:3000/test-receiver"}'
 
           curl -s -X POST http://localhost:3000/subscribers \
             -H "Content-Type: application/json" \
-            -d '{"pipeline_id":3,"target_url":"https://webhook.site/test3"}'
+            -d '{"pipeline_id":3,"target_url":"http://localhost:3000/test-receiver"}'
 
           echo "📩 Sending webhooks..."
 
@@ -156,8 +169,8 @@ jobs:
           # echo "📦 Delivery attempts:"
           #curl -s http://localhost:3000/delivery-attempts | jq
           - name: 🧪 Validate delivery per subscriber
-           run: |
-            echo "📩 Sending webhook..."
+            run: |
+              echo "📩 Sending webhook..."
 
             curl -s -X POST http://localhost:3000/webhooks/1 \
               -H "Content-Type: application/json" \
