@@ -296,7 +296,6 @@ curl -X POST http://localhost:3000/webhooks/3 \
 
 These action types allow for simple but effective processing of incoming webhook data. You can create complex workflows by chaining multiple pipelines and applying different actions to the payloads. Customize the behavior by adjusting the action_type and related configurations for each pipeline.
 
-
 ##  Debugging
 
 ### View worker logs:
@@ -304,6 +303,17 @@ These action types allow for simple but effective processing of incoming webhook
 ```bash
 docker compose logs -f worker
 ```
+## CI/CD Actions
+- CI (Continuous Integration) steps:
+    - 1. Checkout code (actions/checkout@v3)
+    - 2. Start the system (API, Worker, DB, Redis)
+    - 3. Wait for API readiness
+    - 4. Run full system tests:
+      - Create pipelines
+      - Add subscribers
+      - Send webhooks
+      - Verify job results
+      - Test delivery attempts
 
 ### Common issues:
 
