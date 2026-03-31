@@ -151,11 +151,11 @@ jobs:
               echo "✅ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID success ($TOTAL attempts)"
             fi
 
+          done
+
         done
 
-      done
-
-    done
+       done
 
 
-    echo "🎉 ALL TESTS PASSED"
+       echo "🎉 ALL TESTS PASSED"
