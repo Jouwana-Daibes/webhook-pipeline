@@ -100,27 +100,10 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"message":"hello from CI"}'
 
-            #          sleep 10
+          sleep 20
 
-            #JOB_ID=$(curl -s http://localhost:3000/jobs/pipeline/1 | jq 'sort_by(.id) | last | .id')
-          echo "⏳ Waiting for job to appear..."
-
-          for i in {1..10}; do
-            JOB_ID=$(curl -s http://localhost:3000/jobs/pipeline/1 | jq -r 'sort_by(.id) | last | .id')
-
-            if [ "$JOB_ID" != "null" ] && [ -n "$JOB_ID" ]; then
-              echo "Found job: $JOB_ID"
-              break
-            fi
-
-            echo "Waiting for job..."
-              sleep 2
-            done
-
-            if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
-              echo "❌ Job not found"
-                exit 1
-            fi
+          JOB_ID=$(curl -s http://localhost:3000/jobs/pipeline/1 | jq 'sort_by(.id) | last | .id')
+         
 
           SUBSCRIBERS=$(curl -s http://localhost:3000/subscribers/pipeline/1)
           ATTEMPTS=$(curl -s http://localhost:3000/delivery-attempts/job/$JOB_ID)
