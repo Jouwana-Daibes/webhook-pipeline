@@ -105,57 +105,57 @@ jobs:
           JOB_ID=$(curl -s http://localhost:3000/jobs/pipeline/1 | jq 'sort_by(.id) | last | .id')
 
 
-# Give the workers some time to process jobs
-sleep 15
+          # Give the workers some time to process jobs
+          sleep 15
           
-FAILED=0
-MAX_RETRIES=3
+          FAILED=0
+          MAX_RETRIES=3
 
-for PIPELINE_ID in 1 2 3; do
-  echo "🔍 Checking Pipeline $PIPELINE_ID..."
+          for PIPELINE_ID in 1 2 3; do
+            echo "🔍 Checking Pipeline $PIPELINE_ID..."
 
-  SUBSCRIBERS=$(curl -s http://localhost:3000/subscribers/pipeline/$PIPELINE_ID)
-  JOBS=$(curl -s http://localhost:3000/jobs/pipeline/$PIPELINE_ID)
+          SUBSCRIBERS=$(curl -s http://localhost:3000/subscribers/pipeline/$PIPELINE_ID)
+          JOBS=$(curl -s http://localhost:3000/jobs/pipeline/$PIPELINE_ID)
 
-  for JOB_ID in $(echo $JOBS | jq -r '.[].id'); do
-    echo "📦 Checking Job $JOB_ID..."
+          for JOB_ID in $(echo $JOBS | jq -r '.[].id'); do
+            echo "📦 Checking Job $JOB_ID..."
 
-    ATTEMPTS=$(curl -s http://localhost:3000/delivery_attempts/job/$JOB_ID)
+          ATTEMPTS=$(curl -s http://localhost:3000/delivery_attempts/job/$JOB_ID)
 
-    # Skip if no attempts yet (worker delay protection)
-    if [ "$(echo $ATTEMPTS | jq length)" -eq 0 ]; then
-      echo "⏳ No attempts yet for Job $JOB_ID, skipping..."
-      continue
-    fi
+          # Skip if no attempts yet (worker delay protection)
+          if [ "$(echo $ATTEMPTS | jq length)" -eq 0 ]; then
+            echo "⏳ No attempts yet for Job $JOB_ID, skipping..."
+            continue
+          fi
 
-    for SUB_ID in $(echo $SUBSCRIBERS | jq -r '.[].id'); do
+          for SUB_ID in $(echo $SUBSCRIBERS | jq -r '.[].id'); do
       
-      # Count successful deliveries
-      SUCCESS=$(echo $ATTEMPTS | jq "[.[] | select(.subscriber_id == $SUB_ID and .success == true)] | length")
+            # Count successful deliveries
+            SUCCESS=$(echo $ATTEMPTS | jq "[.[] | select(.subscriber_id == $SUB_ID and .success == true)] | length")
 
-      # Count total attempts (retries)
-      TOTAL=$(echo $ATTEMPTS | jq "[.[] | select(.subscriber_id == $SUB_ID)] | length")
+            # Count total attempts (retries)
+            TOTAL=$(echo $ATTEMPTS | jq "[.[] | select(.subscriber_id == $SUB_ID)] | length")
 
-      # ❌ No success
-      if [ "$SUCCESS" -eq 0 ]; then
-        echo "❌ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID FAILED (no success)"
-        FAILED=1
-        continue
-      fi
+            # ❌ No success
+            if [ "$SUCCESS" -eq 0 ]; then
+              echo "❌ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID FAILED (no success)"
+              FAILED=1
+              continue
+            fi
 
-      # ❌ Too many retries
-      if [ "$TOTAL" -gt "$MAX_RETRIES" ]; then
-        echo "❌ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID exceeded retries ($TOTAL > $MAX_RETRIES)"
-        FAILED=1
-      else
-        echo "✅ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID success ($TOTAL attempts)"
-      fi
+            # ❌ Too many retries
+            if [ "$TOTAL" -gt "$MAX_RETRIES" ]; then
+              echo "❌ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID exceeded retries ($TOTAL > $MAX_RETRIES)"
+              FAILED=1
+            else
+              echo "✅ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID success ($TOTAL attempts)"
+            fi
+
+        done
+
+      done
 
     done
 
-  done
 
-done
-
-
-echo "🎉 ALL TESTS PASSED"
+    echo "🎉 ALL TESTS PASSED"
