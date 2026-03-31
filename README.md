@@ -314,7 +314,13 @@ docker compose logs -f worker
       - Send webhooks
       - Verify job results
       - Test delivery attempts
-
+**Note:**
+The CD step is configured but not actively used. However, the deployment process is fully defined and can be enabled by:
+  - Providing a remote server (e.g., AWS, DigitalOcean)
+  - Adding the required GitHub Secrets:
+  - SERVER_HOST
+  - SERVER_USER
+  - SERVER_SSH_KEY
 ### Common issues:
 
 * No subscribers → no webhook calls
@@ -323,8 +329,6 @@ docker compose logs -f worker
 ---
 
 ##  Future Improvements
-
-* Retry mechanism for failed deliveries
 * Dead-letter queue
 * Authentication for webhooks
 * UI dashboard
