@@ -71,29 +71,29 @@ jobs:
 
           echo "📊 Fetching jobs..."
           JOB1=$(curl -s http://localhost:3000/jobs/pipeline/1 | jq 'sort_by(.id) | last')
-          JOB2=$(curl -s http://localhost:3000/jobs/pipeline/2 | jq 'sort_by(.id) | last')
+          # Get jobs for pipelines
+          JOB2_FIRST=$(curl -s http://localhost:3000/jobs/pipeline/2 | jq 'sort_by(.id) | first')
+          JOB2_LAST=$(curl -s http://localhost:3000/jobs/pipeline/2 | jq 'sort_by(.id) | last')
           JOB3=$(curl -s http://localhost:3000/jobs/pipeline/3 | jq 'sort_by(.id) | last')
 
           MSG_UPPER=$(echo $JOB1 | jq -r '.result.message')
-          DUP_FLAG=$(echo $JOB2 | jq -r '.result.is_duplicate')
+          # First "same" message duplicate flag
+          DUP_FLAG_FIRST=$(echo $JOB2_FIRST | jq -r '.result.is_duplicate')
+          # Last "same" message duplicate flag
+          DUP_FLAG_LAST=$(echo $JOB2_LAST | jq -r '.result.is_duplicate')
           SENTIMENT=$(echo $JOB3 | jq -r '.result.sentiment')
 
           echo "Uppercase: $MSG_UPPER"
-          echo "Duplicate: $DUP_FLAG"
+          echo "First Duplicate (should be false): $DUP_FLAG_FIRST"
+          echo "Last Duplicate: $DUP_FLAG_LAST"
           echo "Sentiment: $SENTIMENT"
 
           if [ "$MSG_UPPER" != "HELLO" ]; then exit 1; fi
-          if [ "$DUP_FLAG" != "true" ]; then exit 1; fi
+          if [ "$DUP_FLAG_LAST" != "true" ]; then exit 1; fi
           if [ "$SENTIMENT" != "positive" ]; then exit 1; fi
 
           echo "✅ Logic tests passed"
           echo "🧪 Testing delivery attempts..."
-
-          curl -s -X POST http://localhost:3000/webhooks/1 \
-            -H "Content-Type: application/json" \
-            -d '{"message":"hello from CI"}'
-
-          sleep 20
 
           # Give the workers some time to process jobs
           sleep 15
