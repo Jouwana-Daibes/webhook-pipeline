@@ -46,7 +46,6 @@ jobs:
             -d '{"name":"Sentiment","source_url":"s3","action_type":"sentiment_analysis"}'
 
           echo "👥 Adding subscribers..."
-
           for i in 1 2 3; do
             curl -s -X POST http://localhost:3000/subscribers \
               -H "Content-Type: application/json" \
@@ -54,19 +53,15 @@ jobs:
           done
 
           echo "📩 Sending webhooks..."
-
           curl -s -X POST http://localhost:3000/webhooks/1 \
             -H "Content-Type: application/json" \
             -d '{"message":"hello"}'
-
           curl -s -X POST http://localhost:3000/webhooks/2 \
             -H "Content-Type: application/json" \
             -d '{"message":"same"}'
-
           curl -s -X POST http://localhost:3000/webhooks/2 \
             -H "Content-Type: application/json" \
             -d '{"message":"same"}'
-
           curl -s -X POST http://localhost:3000/webhooks/3 \
             -H "Content-Type: application/json" \
             -d '{"message":"this is amazing and perfect"}'
@@ -75,7 +70,6 @@ jobs:
           sleep 12
 
           echo "📊 Fetching jobs..."
-
           JOB1=$(curl -s http://localhost:3000/jobs/pipeline/1 | jq 'sort_by(.id) | last')
           JOB2=$(curl -s http://localhost:3000/jobs/pipeline/2 | jq 'sort_by(.id) | last')
           JOB3=$(curl -s http://localhost:3000/jobs/pipeline/3 | jq 'sort_by(.id) | last')
@@ -93,7 +87,6 @@ jobs:
           if [ "$SENTIMENT" != "positive" ]; then exit 1; fi
 
           echo "✅ Logic tests passed"
-
           echo "🧪 Testing delivery attempts..."
 
           curl -s -X POST http://localhost:3000/webhooks/1 \
@@ -101,9 +94,6 @@ jobs:
             -d '{"message":"hello from CI"}'
 
           sleep 20
-
-          JOB_ID=$(curl -s http://localhost:3000/jobs/pipeline/1 | jq 'sort_by(.id) | last | .id')
-
 
           # Give the workers some time to process jobs
           sleep 15
@@ -113,49 +103,39 @@ jobs:
 
           for PIPELINE_ID in 1 2 3; do
             echo "🔍 Checking Pipeline $PIPELINE_ID..."
+            SUBSCRIBERS=$(curl -s http://localhost:3000/subscribers/pipeline/$PIPELINE_ID)
+            JOBS=$(curl -s http://localhost:3000/jobs/pipeline/$PIPELINE_ID)
 
-          SUBSCRIBERS=$(curl -s http://localhost:3000/subscribers/pipeline/$PIPELINE_ID)
-          JOBS=$(curl -s http://localhost:3000/jobs/pipeline/$PIPELINE_ID)
+            for JOB_ID in $(echo $JOBS | jq -r '.[].id'); do
+              echo "📦 Checking Job $JOB_ID..."
+              ATTEMPTS=$(curl -s http://localhost:3000/delivery_attempts/job/$JOB_ID)
 
-          for JOB_ID in $(echo $JOBS | jq -r '.[].id'); do
-            echo "📦 Checking Job $JOB_ID..."
+              # Skip if no attempts yet (worker delay protection)
+              if [ "$(echo $ATTEMPTS | jq length)" -eq 0 ]; then
+                echo "⏳ No attempts yet for Job $JOB_ID, skipping..."
+                continue
+              fi
 
-          ATTEMPTS=$(curl -s http://localhost:3000/delivery_attempts/job/$JOB_ID)
+              for SUB_ID in $(echo $SUBSCRIBERS | jq -r '.[].id'); do
+                # Count successful deliveries
+                SUCCESS=$(echo $ATTEMPTS | jq "[.[] | select(.subscriber_id == $SUB_ID and .success == true)] | length")
+                # Count total attempts (retries)
+                TOTAL=$(echo $ATTEMPTS | jq "[.[] | select(.subscriber_id == $SUB_ID)] | length")
 
-          # Skip if no attempts yet (worker delay protection)
-          if [ "$(echo $ATTEMPTS | jq length)" -eq 0 ]; then
-            echo "⏳ No attempts yet for Job $JOB_ID, skipping..."
-            continue
-          fi
+                if [ "$SUCCESS" -eq 0 ]; then
+                  echo "❌ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID FAILED (no success)"
+                  FAILED=1
+                  continue
+                fi
 
-          for SUB_ID in $(echo $SUBSCRIBERS | jq -r '.[].id'); do
-      
-            # Count successful deliveries
-            SUCCESS=$(echo $ATTEMPTS | jq "[.[] | select(.subscriber_id == $SUB_ID and .success == true)] | length")
-
-            # Count total attempts (retries)
-            TOTAL=$(echo $ATTEMPTS | jq "[.[] | select(.subscriber_id == $SUB_ID)] | length")
-
-            # ❌ No success
-            if [ "$SUCCESS" -eq 0 ]; then
-              echo "❌ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID FAILED (no success)"
-              FAILED=1
-              continue
-            fi
-
-            # ❌ Too many retries
-            if [ "$TOTAL" -gt "$MAX_RETRIES" ]; then
-              echo "❌ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID exceeded retries ($TOTAL > $MAX_RETRIES)"
-              FAILED=1
-            else
-              echo "✅ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID success ($TOTAL attempts)"
-            fi
-
+                if [ "$TOTAL" -gt "$MAX_RETRIES" ]; then
+                  echo "❌ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID exceeded retries ($TOTAL > $MAX_RETRIES)"
+                  FAILED=1
+                else
+                  echo "✅ Pipeline $PIPELINE_ID - Job $JOB_ID - Subscriber $SUB_ID success ($TOTAL attempts)"
+                fi
+              done
+            done
           done
 
-        done
-
-       done
-
-
-       echo "🎉 ALL TESTS PASSED"
+          echo "🎉 ALL TESTS PASSED"
