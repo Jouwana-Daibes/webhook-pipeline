@@ -106,7 +106,7 @@ jobs:
          
 
           SUBSCRIBERS=$(curl -s http://localhost:3000/subscribers/pipeline/1)
-          ATTEMPTS=$(curl -s http://localhost:3000/delivery-attempts/job/$JOB_ID)
+          ATTEMPTS=$(curl -s http://localhost:3000/delivery_attempts/job/$JOB_ID)
 
           FAILED=0
 
